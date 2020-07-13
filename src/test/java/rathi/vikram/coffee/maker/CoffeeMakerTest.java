@@ -9,14 +9,22 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.logging.LogManager;
 import java.util.logging.Logger;
+
+import static org.junit.Assert.fail;
 
 public class CoffeeMakerTest {
 
     private static final Logger LOG = Logger.getLogger(CoffeeMakerTest.class.getSimpleName());
 
     @Before
-    public void setUp() {
+    public void setUp() throws Exception {
+        LogManager.getLogManager()
+                .readConfiguration(CoffeeMaker.class.getClassLoader().getResourceAsStream("logging.properties"));
         LOG.info("setup()");
     }
 
@@ -83,6 +91,42 @@ public class CoffeeMakerTest {
         coffeeMaker.makeBeverages(beverages);
 
         coffeeMaker.showIngredients();
+    }
+
+    @Test
+    public void makeBeverageMultiThread() throws Exception {
+        CoffeeMaker coffeeMaker = new CoffeeMaker("input.json");
+        coffeeMaker.on();
+
+        CyclicBarrier gate = new CyclicBarrier(3);
+        ExecutorService executorService = Executors.newFixedThreadPool(2, new NamedThreadFactory(CoffeeMakerTest.class, "Barista"));
+        executorService.submit(() -> {
+            try {
+                gate.await();
+                List<String> beverages = new ArrayList<>();
+                beverages.add("hot_tea");
+                beverages.add("hot_coffee");
+                LOG.info(Thread.currentThread().getName() + " :: Making beverages: " + String.join(", ", beverages));
+                coffeeMaker.makeBeverages(beverages);
+            } catch (Exception e) {
+                fail();
+            }
+        });
+        executorService.submit(() -> {
+            try {
+                gate.await();
+                List<String> beverages = new ArrayList<>();
+                beverages.add("black_tea");
+                beverages.add("green_tea");
+                LOG.info(Thread.currentThread().getName() + " :: Making beverages: " + String.join(", ", beverages));
+                coffeeMaker.makeBeverages(beverages);
+            } catch (Exception e) {
+                fail();
+            }
+        });
+
+        gate.await();
+        Thread.sleep(10_000);
     }
 
     @Test

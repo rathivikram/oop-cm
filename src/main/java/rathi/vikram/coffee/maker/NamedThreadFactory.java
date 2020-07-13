@@ -5,12 +5,8 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class NamedThreadFactory implements ThreadFactory {
-    final AtomicInteger threadNumber = new AtomicInteger(0);
-    final String threadName;
-
-    public NamedThreadFactory(Class<?> poolClazz) {
-        this.threadName = poolClazz.getSimpleName();
-    }
+    private final AtomicInteger threadNumber = new AtomicInteger(0);
+    private final String threadName;
 
     public NamedThreadFactory(Class<?> poolClazz, String name) {
         this.threadName = poolClazz.getSimpleName() + "-" + name;
@@ -23,6 +19,6 @@ public class NamedThreadFactory implements ThreadFactory {
     }
 
     protected void setName(Thread thread) {
-        thread.setName(this.threadName + "-" + this.threadNumber.getAndIncrement());
+        thread.setName(this.threadName + "#" + this.threadNumber.getAndIncrement());
     }
 }

@@ -17,7 +17,7 @@ import static java.lang.String.format;
 
 public class CoffeeMaker {
 
-    private static final Logger LOG = Logger.getLogger(CoffeeMaker.class.getName());
+    private static final Logger LOG = Logger.getLogger(CoffeeMaker.class.getSimpleName());
     private static final long MILLIS_TO_PREPARE_A_BEVERAGE = TimeUnit.SECONDS.toMillis(5);
 
     private boolean onState;
@@ -37,7 +37,7 @@ public class CoffeeMaker {
         this.outlets = config.machine.outlets.count;
         beverageConfig = new BeverageConfig(config.machine.beverageCompositions);
         stock = new ConcurrentHashMap<>(config.machine.ingredients);
-        brewingService = Executors.newFixedThreadPool(outlets, new NamedThreadFactory(CoffeeMaker.class, "outlets"));
+        brewingService = Executors.newFixedThreadPool(outlets, new NamedThreadFactory(CoffeeMaker.class, "Outlet"));
     }
 
     /**
@@ -90,18 +90,18 @@ public class CoffeeMaker {
 
         try {
             brewingService.submit(() -> {
-                LOG.info("Preparing beverage " + beverageComposition.getName() + "...");
+                LOG.info(Thread.currentThread().getName() + " :: Preparing beverage " + beverageComposition.getName() + "...");
                 try {
                     Thread.sleep(MILLIS_TO_PREPARE_A_BEVERAGE);
                 } catch (InterruptedException e) {
-                    LOG.log(Level.WARNING, "Beverage was interrupted: " + beverageComposition.getName(), e);
+                    LOG.log(Level.WARNING, Thread.currentThread().getName() + " :: Beverage was interrupted: " + beverageComposition.getName(), e);
                 }
-                LOG.info(beverageComposition.getName() + " is prepared");
+                LOG.info(Thread.currentThread().getName() + " :: " + beverageComposition.getName() + " is prepared");
             });
         } catch (RejectedExecutionException e) {
-            LOG.log(Level.WARNING, "Unable to submit beverage because machine is off", e);
+            LOG.log(Level.WARNING, Thread.currentThread().getName() + " :: Unable to submit beverage because machine is off", e);
         } catch (Exception e) {
-            LOG.log(Level.WARNING, "Unable to prepare beverage", e);
+            LOG.log(Level.WARNING, Thread.currentThread().getName() + " :: Unable to prepare beverage", e);
         }
     }
 
@@ -132,6 +132,7 @@ public class CoffeeMaker {
     }
 
     public void refillIngredients(Map<String, Integer> ingredients) {
+        LOG.info("refillIngredients()");
         synchronized (this) {
             for (Map.Entry<String, Integer> refill : ingredients.entrySet()) {
                 String ingredientName = refill.getKey();
@@ -145,12 +146,12 @@ public class CoffeeMaker {
 
     public void showIngredients() {
         StringBuilder sb = new StringBuilder();
-        sb.append("-----CURRENT INGREDIENT STOCK-----\n");
+        sb.append("\n\n----- CURRENT INGREDIENT STOCK -----\n");
         int count = 1;
         for (Map.Entry<String, Integer> entry : stock.entrySet()) {
             sb.append(format("%d. %s : %d \n", count++, entry.getKey(), entry.getValue()));
         }
-
+        sb.append("----- END -----\n");
         LOG.info(sb.toString());
     }
 }
